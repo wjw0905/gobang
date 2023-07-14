@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="./style.css" rel="stylesheet"></head>
+    <script type="text/javascript" src="./func.js"></script>
+    <title>五子棋游戏</title>
+</head>
+<body>
+    <h3 class="title">五子棋</h3>
+    <canvas class="chess" width="450px" height="450px"></canvas>
+    <div>
+        <a  class="restart" onClick="rst()">重新开始</a>
+    </div>
+</body>
+<script>
+    var chess = document.getElementsByClassName('chess')[0]
+    var title = document.getElementsByClassName('title')[0]
+    var context = chess.getContext('2d')
+    context.strokeStyle = '#b9b9b9'
+
+    //为确保dom元素的完整，在html渲染后再调用
+    window.onload = function(){
+        drawChessBox()
+    }
+
+    //赢法数组
+    var win=[]
+    //赢法编号
+    var count = 0
+    //下棋记录数组
+    var chessboard=[]
+    //记录计算机取得分值
+    var mywin=[]
+    //记录AI取得分值
+    var computerwin=[]
+
+    //初始化赢法
+    for(var i = 0 ; i < 15 ; i ++){
+        win[i]=[]
+        for(var j = 0 ; j < 15; j ++){
+            win[i][j]=[]
+        }
+    }
+
+    //横线赢法
+    //i纵坐标j横坐标
+    for(var i = 0;i < 15; i ++){
+        for(var j = 0 ; j < 11 ; j ++){
+            for(var k = 0 ; k < 5 ; k ++){
+                win[j+k][i][count]=true
+            }
+            count++
+        }
+    }
+
+    //竖线赢法
+    for(var i = 0 ; i < 15 ; i ++){
+        for(var j = 0 ; j < 11 ; j ++){
+            for(var k = 0 ; k < 5 ; k++){
+                win[i][j+k][count]=true
+            }
+            count++
+        }
+    }
+
+    //正斜线赢法
+    for(var i = 0 ; i < 11 ; i ++){
+        for(var j = 0 ; j < 11 ; j ++){
+            for(var k = 0 ; k < 5 ; k ++){
+                win[i+k][j+k][count]=true
+            }
+            count++
+        }
+    }
+
+    //反斜线赢法
+    for(var i = 0;i < 11 ; i ++){
+        for(var j = 14 ; j > 3 ; j --){
+            for(var k = 0 ; k < 5 ; k ++){
+                win[i+k][j-k][count]=true
+            }
+            count++
+        }
+    }
+
+    //初始化棋盘
+    for(var i = 0 ; i < 15 ; i ++){
+        chessboard[i]=[]
+        for(var j = 0 ; j < 15 ; j ++){
+            chessboard[i][j]=0
+        }
+    }
+
+    //初始化分值数组
+    for(var k = 0 ; k < count ; k ++){
+        mywin[k]=0
+        computerwin[k]=0
+    }
+
+    //用户下棋
+    var me = true;//标记人是否可以下棋
+    var over = false;//标记是否游戏结束
+
+    chess.onclick = function(e){
+        //记录计算机是否可以下
+        var computer = false
+
+        if(over){
+            return ;
+        }
+
+        if(!me){
+            return;
+        }
+
+        var x = e.offsetX;
+        var y = e.offsetY;
+        var i = Math.floor(x/30)
+        var j = Math.floor(y/30)
+
+        //用户下一子
+        if(chessboard[i][j]==0){
+
+            //下一棋
+            oneStep(i,j,me)
+
+            chessboard[i][j]=1
+
+            computer = true
+
+            for(var k = 0 ; k < count ; k ++){
+                if(win[i][j][k]){
+                    mywin[k]++
+                    if(mywin[k]==5){
+                        title.innerHTML="恭喜你获胜了"
+                        over=true
+                    }
+                }
+            }
+        }
+    
+        //计算机下子，落子前判断是否是重复落子
+        if(!over && computer){
+            me = false
+
+            setTimeout(computerAI,500)
+        }
+    }
+
+    //计算机落子
+    function computerAI(){
+        //空白子在拦截用户上的分值
+        var myScore=[]
+
+        //空白子在计算机赢法的分值
+        var computerScore=[]
+
+        for(var i = 0 ; i < 15 ; i ++){
+            myScore[i] = []
+            computerScore[i]=[]
+            for(var j = 0 ; j < 15 ; j ++){
+                myScore[i][j]=0;
+                computerScore[i][j]=0
+            }
+        }
+
+        //空白子的最大分值
+        var max = 0 
+        //最大分值坐标
+        var maxX = 0 , maxY = 0;
+        var maxScore = 0 
+
+        //遍历每个空白位置评估分值
+        for(var i = 0 ; i < 15 ; i ++){
+            for(var j = 0 ; j < 15 ; j ++){
+                if(chessboard[i][j]==0){
+                    for(var k = 0 ; k < count ; k ++){
+                        if(win[i][j][k]){
+                            if(mywin[k]==1){
+                                myScore[i][j]+=200;
+                            }else if(mywin[k]==2){
+                                myScore[i][j]+=400;
+                            }else if(mywin[k]==3){
+                                myScore[i][j]+=2000
+                            }else if(mywin[k]==4){
+                                myScore[i][j]+=10000
+                            }
+
+                            if(computerwin[k]==1){
+                                computerScore[i][j]+=220
+                            }else if(computerwin[k]==2){
+                                computerScore[i][j]+=420
+                            }else if(computerwin[k]==3){
+                                computerScore[i][j]+=2200
+                            }else if(computerwin[k]==4){
+                                computerScore[i][j]+=20000
+                            }
+                        }
+                    }
+
+                    if(myScore[i][j]>max){
+                        max=myScore[i][j]
+                        maxX = i 
+                        maxY = j
+                    }else if (myScore[i][j]==max){
+                        if(computerScore[i][j]>max){
+                            max=computerScore[i][j]
+                            maxX = i
+                            maxY = j
+                        }
+                    }
+
+                    if(computerScore[i][j]>max){
+                        max=computerScore[i][j]
+                        maxX = i
+                        maxY = j
+                    }else if (computerScore[i][j]==max){
+                        if(myScore[i][j]>max){
+                            max=myScore[i][j]
+                            maxX = i 
+                            maxY = j
+                        }
+                    }
+
+                }
+            }
+        }
+
+        oneStep(maxX,maxY,me)
+        chessboard[maxX][maxY]= 1
+        for(var k = 0 ; k < count ; k ++){
+            if(win[maxX][maxY][k]){
+                computerwin[k]++
+                if(computerwin[k]==5){
+                    title.innerHTML="抱歉，计算机获胜！"
+                    over = true
+                }
+            }
+        }
+
+        //如果需要让用户继续下
+        if(!over){
+            me = !me
+        }
+
+    }
+
+    //绘制一棋
+    function oneStep(i,j,me){
+        //画圆弧
+        context.beginPath()
+        context.arc(15+i*30,15+j*30,13,0,2*Math.PI)
+        context.closePath()
+
+        //设置颜色
+        var color = me ? "#000000" : "red"
+        context.fillStyle = color
+        context.fill()
+    }
+
+    function rst(){
+        window.location.reload()
+    }
+
+</script>
+</html>
